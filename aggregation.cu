@@ -28,6 +28,9 @@ __global__ void Spmm(CSR sparse_adj, unsigned int *target_nodes, unsigned int *s
             shared_adj_vals[warp_id*sampling_size + j] = sparse_adj.vals[sparse_adj.rowPtrs[target_node] + sample_neighbor];
             shared_adj_cols[warp_id*sampling_size + j] = sparse_adj.cols[sparse_adj.rowPtrs[target_node] + sample_neighbor];
         }
+        for(unsigned int j=lane_id;j<FeatureSize;j+=32){
+            temp_outcome[warp_id*FeatureSize + j] = 0.0f;
+        }
         __syncwarp();
         for(unsigned int k=0;k<sampling_size;k++){
             unsigned int neigh = shared_adj_cols[warp_id*sampling_size + k];
@@ -37,10 +40,8 @@ __global__ void Spmm(CSR sparse_adj, unsigned int *target_nodes, unsigned int *s
                 temp_outcome[warp_id*FeatureSize + j] += edge_val * feature_val;
             }
         }
-        for(unsigned int i=lane_id;i<FeatureSize;i+=32){
-            output[global_warp_id * FeatureSize + i] = temp_outcome[warp_id*FeatureSize +i];
+        for(unsigned int j=lane_id;j<FeatureSize;j+=32){
+            output[i * FeatureSize + j] = temp_outcome[warp_id*FeatureSize +j];
         }
-
     }
-
 }
